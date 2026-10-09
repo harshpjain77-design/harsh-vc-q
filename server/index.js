@@ -105,19 +105,37 @@ app.get('/api/tasks', async (req, res) => {
     const tasks = await db.getTasks({ projectId, priority, search, assigneeId, status });
     res.json(tasks);
   } catch (err) {
+    console.error('Error fetching tasks:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.post('/api/tasks', async (req, res) => {
   try {
-    const { projectId, title, description, status, priority, assigneeId, dueDate } = req.body;
-    if (!projectId || !title) {
-      return res.status(400).json({ error: 'Project ID and title are required' });
+    let { projectId, title, description, status, priority, assigneeId, dueDate } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'Task title is required' });
     }
-    const task = await db.createTask({ projectId, title, description, status, priority, assigneeId, dueDate });
+
+    // Fallback if projectId not provided
+    if (!projectId) {
+      const projects = await db.getProjects();
+      projectId = projects.length > 0 ? projects[0].id : 1;
+    }
+
+    const task = await db.createTask({
+      projectId: parseInt(projectId, 10),
+      title: title.trim(),
+      description: description || '',
+      status: status || 'todo',
+      priority: priority || 'medium',
+      assigneeId: assigneeId ? parseInt(assigneeId, 10) : null,
+      dueDate: dueDate || null
+    });
+    console.log(`[Task Created] ID: ${task.id}, Title: "${task.title}", Status: ${task.status}, Project: ${projectId}`);
     res.status(201).json(task);
   } catch (err) {
+    console.error('Error creating task:', err);
     res.status(500).json({ error: err.message });
   }
 });

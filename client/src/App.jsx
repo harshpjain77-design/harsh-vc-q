@@ -180,34 +180,60 @@ export default function App() {
 
   // Create or Update task
   const handleSaveTask = async (taskData) => {
-    try {
-      let res;
-      if (taskData.id) {
-        // Update
-        res = await fetch(`/api/tasks/${taskData.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(taskData)
-        });
-      } else {
-        // Create
-        res = await fetch('/api/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(taskData)
-        });
-      }
+    const targetProjId = taskData.projectId || selectedProjectId || 1;
 
-      if (!res.ok) throw new Error('Failed to save task');
-
-      setIsTaskModalOpen(false);
-      setTaskToEdit(null);
-      await fetchProjectData(selectedProjectId);
-      showToast(taskData.id ? 'Task updated successfully' : 'Task created successfully', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Error saving task', 'error');
+    let res;
+    if (taskData.id) {
+      // Update
+      res = await fetch(`/api/tasks/${taskData.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData)
+      });
+    } else {
+      // Create
+      res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...taskData, projectId: targetProjId })
+      });
     }
+
+    if (!res.ok) {
+      let errMsg = 'Failed to save task';
+      try {
+        const errJson = await res.json();
+        errMsg = errJson.error || errMsg;
+      } catch {
+        errMsg = await res.text() || errMsg;
+      }
+      throw new Error(errMsg);
+    }
+
+    const savedTask = await res.json();
+
+    // Close modal
+    setIsTaskModalOpen(false);
+    setTaskToEdit(null);
+
+    // If new task was created with a priority or assignee that would be hidden by active filters,
+    // reset filters so the newly created task card is GUARANTEED to be visible immediately!
+    if (!taskData.id) {
+      setSelectedPriority('all');
+      setSelectedUserFilter('all');
+      setSearchQuery('');
+    }
+
+    // Switch to target project if different
+    if (targetProjId !== selectedProjectId) {
+      setSelectedProjectId(targetProjId);
+    } else {
+      await fetchProjectData(targetProjId);
+    }
+
+    await fetchProjects();
+    showToast(taskData.id ? 'Task updated successfully' : `Task "${savedTask.title}" created successfully!`, 'success');
+    return savedTask;
   };
 
   // Delete task
@@ -417,7 +443,9 @@ export default function App() {
         onSave={handleSaveTask}
         taskToEdit={taskToEdit}
         projectId={selectedProjectId}
+        projects={projects}
         members={projectMembers}
+        allUsers={allUsers}
         defaultStatus={defaultColumnForModal}
       />
 

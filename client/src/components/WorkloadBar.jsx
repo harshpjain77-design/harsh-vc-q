@@ -123,7 +123,7 @@ export default function WorkloadBar({
                 <div className="absolute -bottom-11 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none whitespace-nowrap">
                   <div className="px-2 py-1 rounded bg-slate-950 text-[11px] font-medium text-slate-200 border border-slate-700 shadow-xl">
                     {user.name}: {user.inProgressCount} In Progress
-                    {isBurnout && <span className="text-red-400 font-bold ml-1">🔥 BURNOUT WARNING (>5)!</span>}
+                    {isBurnout && <span className="text-red-400 font-bold ml-1">🔥 BURNOUT WARNING (&gt;5)!</span>}
                   </div>
                 </div>
               </div>

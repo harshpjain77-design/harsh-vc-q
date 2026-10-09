@@ -363,20 +363,27 @@ module.exports = {
     const aId = assigneeId ? parseInt(assigneeId, 10) : null;
 
     if (isPgConnected) {
-      const countRes = await pool.query('SELECT COUNT(*) FROM tasks WHERE project_id = $1 AND status = $2', [projId, validStatus]);
-      const nextOrder = parseInt(countRes.rows[0].count, 10);
+      // Shift existing tasks in column down by 1
+      await pool.query('UPDATE tasks SET order_index = order_index + 1 WHERE project_id = $1 AND status = $2', [projId, validStatus]);
 
       const res = await pool.query(`
         INSERT INTO tasks (project_id, title, description, status, priority, assignee_id, due_date, order_index)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 0)
         RETURNING *
-      `, [projId, title, description || '', validStatus, validPriority, aId, dueDate || null, nextOrder]);
+      `, [projId, title, description || '', validStatus, validPriority, aId, dueDate || null]);
       return res.rows[0];
     }
 
     const data = getLocalData();
     const newId = (data.tasks.reduce((max, t) => Math.max(max, t.id), 0) || 0) + 1;
-    const colTasks = data.tasks.filter(t => t.project_id === projId && t.status === validStatus);
+
+    // Shift existing tasks in the same column down by 1
+    data.tasks.forEach(t => {
+      if (t.project_id === projId && t.status === validStatus) {
+        t.order_index = (t.order_index || 0) + 1;
+      }
+    });
+
     const newTask = {
       id: newId,
       project_id: projId,
@@ -386,7 +393,7 @@ module.exports = {
       priority: validPriority,
       assignee_id: aId,
       due_date: dueDate || null,
-      order_index: colTasks.length
+      order_index: 0
     };
     data.tasks.push(newTask);
     saveLocalData(data);
