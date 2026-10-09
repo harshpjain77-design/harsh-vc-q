@@ -1,0 +1,15 @@
+{
+  "name": "kanban-task-manager",
+  "version": "1.0.0",
+  "description": "Streamlined task management application with Kanban-style organization and Workload Balancing",
+  "scripts": {
+    "server": "cd server && npm start",
+    "client": "cd client && npm run dev",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start"
+  },
+  "keywords": ["kanban", "task-manager", "workload-balancing", "react", "express", "postgresql"],
+  "author": "",
+  "license": "ISC"
+}
